@@ -1,5 +1,5 @@
 {
-  "version": 1.0,
+  "version": 2,
   "builds": [
     {
       "src": "index.js",
@@ -15,10 +15,5 @@
       "src": "/(.*)",
       "dest": "index.js"
     }
-  ],
-  "functions": {
-    "index.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
