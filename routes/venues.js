@@ -180,9 +180,9 @@ router.get("/get-reservation-types/:encryptedVenueId", async (req, res) => {
 });
 
 router.post("/request-reservation", async (req, res) => {
-  const { user, reservation, guestNames } = req.body;
+  const { user, booking, guestNames } = req.body;
 
-  if (!user || !reservation || !guestNames || !Array.isArray(guestNames)) {
+  if (!user || !booking || !guestNames || !Array.isArray(guestNames)) {
     return res
       .status(400)
       .json({ error: "Datos incompletos o mal formateados." });
@@ -202,7 +202,7 @@ router.post("/request-reservation", async (req, res) => {
     const { data: venue } = await supabase
       .from("venues")
       .select("id")
-      .eq("slug", reservation.venueId)
+      .eq("slug", booking.venueId)
       .single();
 
     if (!venue) {
@@ -224,33 +224,32 @@ router.post("/request-reservation", async (req, res) => {
       birth_date: user.birth_date || null,
     });
 
-    const start_date = new Date(`${reservation.date}T${reservation.startTime}`);
-    const end_date = new Date(`${reservation.date}T${reservation.endTime}`);
+    const start_date = new Date(`${booking.date}T${booking.startTime}`);
+    const end_date = new Date(`${booking.date}T${booking.endTime}`);
 
-    const { data: reservationData, error: insertReservationError } =
-      await supabase
-        .from("reservations")
-        .insert({
-          creator_id: userId,
-          venue_id,
-          payment_term_id: reservation.paymentTerm,
-          guests: reservation.guests,
-          start_date,
-          end_date,
-          total_amount: 1000,
-          reservation_type: reservation.table === true ? 1 : 2,
-          created_at: new Date().toISOString(),
-          status_id: 1,
-        })
-        .select("id")
-        .single();
+    const { data: bookingData, error: insertBookingError } = await supabase
+      .from("reservations")
+      .insert({
+        creator_id: userId,
+        venue_id,
+        payment_term_id: booking.paymentTerm,
+        guests: booking.guests,
+        start_date,
+        end_date,
+        total_amount: 1000,
+        reservation_type: booking.table === true ? 1 : 2,
+        created_at: new Date().toISOString(),
+        status_id: 1,
+      })
+      .select("id")
+      .single();
 
-    if (insertReservationError) throw insertReservationError;
+    if (insertBookingError) throw insertBookingError;
 
     const allGuests = [];
 
     allGuests.push({
-      reservation_id: reservationData.id,
+      reservation_id: bookingData.id,
       status_id: 2,
       user_id: userId,
       temp_name: null,
@@ -258,7 +257,7 @@ router.post("/request-reservation", async (req, res) => {
     });
 
     const temporaryGuests = guestNames.map((name) => ({
-      reservation_id: reservationData.id,
+      reservation_id: bookingData.id,
       status_id: 2,
       user_id: null,
       temp_name: name,
@@ -276,7 +275,7 @@ router.post("/request-reservation", async (req, res) => {
     res.status(201).json({
       status: 201,
       message: "Reserva solicitada con éxito.",
-      reservationId: reservationData.id,
+      reservationId: bookingData.id,
     });
   } catch (err) {
     console.error("Error en reserva:", err);
